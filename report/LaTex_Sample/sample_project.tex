@@ -1,0 +1,267 @@
+\documentclass[english]{article}
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{color}
+\usepackage{hyperref}
+
+\input{preamble}
+
+\title{CS5339 Sample Project -- AdaBoost Algorithm}
+\date{}
+\author{Jonathan Scarlett}
+
+\newcommand{\ntrain}{n_{\rm train}}
+\newcommand{\ntest}{n_{\rm test}}
+
+\onehalfspacing
+
+\begin{document}
+\maketitle
+
+{\color{red} 
+\section*{Notes on this Sample Project}
+
+\begin{itemize}
+    \item This project is only meant to give an example indication of style, format, etc., rather than being a model for an ``ideal'' project.   (Though, hypothetically, it could be considered one that would receive a fairly high grade)
+    \item To avoid overlap with the suggested topics, this sample project is based on a topic that will be covered in the lectures.  Your own project should of course avoid significant overlap with the lectures (though comparisons/connections to that material can be highlighted).
+    \item It is not necessary to include everything here (e.g., experiments, detailed proofs, extensions, citations to several published papers) in your report.  You should try to judge this based on your chosen topic and the assessment criteria.
+    \item You may notice the use of the first-person ``we'' despite only having a single author.  This has become conventional in academic writing, but you can use the first-person ``I'' or the passive voice if you prefer.
+    \item This sample report is relatively light on the ``Additional Material'' part regarding experiments and published papers, though it includes a bit of both.  You should ideally include slightly more in your own report.
+\end{itemize}
+}
+
+\section{Introduction} \label{sec:intro}
+
+The fundamental problem of binary classification is central to both classical and modern machine learning.  Many of the earliest works focused on simple classification rules, such as linear classifiers or nearest-neighbor rules, whereas more recent developments have led to more sophisticated ideas such as kernel methods, artificial neural networks, and more.  Many such methods can be viewed as {\em combining simple classifiers} to produce a {\em complex classifier}.
+
+In this report, we will overview a famous algorithm falling under this category, known as AdaBoost, which was introduced by Freund and Schapire in 1997 \cite{freund1997decision}, and subsequently significantly impacted both the theory and practice of machine learning.  The authors were awarded the 2003 G\"odel prize, and the algorithm is often considered to be one one of the most effective ``off-the-shelf'' algorithms requiring minimal tuning and tweaking \cite{blog,wiki}.
+
+Before proceeding with a formal description, we outline some of the main high-level concepts and ideas behind AdaBoost:
+\begin{itemize}
+    \item The algorithm is given a class of {\em weak learners}, also known as {\em base learners}, containing classifiers that are not very powerful in themselves.  Despite this, suitably ``combining'' many such classifiers can lead to a much more powerful classifier.
+    \item The combining is done by a simple voting strategy -- each base learner classifies a given point as positive or negative, and the final classification is performed according to a weighted vote of these base learners, where higher votes are given to the base learners that are believed to be more accurate. The role of AdaBoost is to {\em select the base learners}, as well as choosing the voting weight for each of them.
+    \item The base learners are selected one at a time, and are chosen to minimize a {\em weighted training error} according to some weights that are maintained on the data points (not to be confused with the voting weights).  The more a point has been classified correctly by previously-selected base learners, the lower weight it receives, whereas a point that was previously classified incorrectly many times is assigned a higher weight.  This ensures that more attention is focused on the points where we need to make up for earlier mistakes.
+    \item The weights are updated using the idea of {\em multiplicative weight updates}, which is a far-reaching tool that has also been explored in numerous other fields \cite{mult_weights}.
+\end{itemize}
+To appreciate the third of these points, it is useful to think of the following analogy: If a teacher wants to teach their students a number of concepts, then they should focus more attention on the concepts that many students scored poorly on in previous tests/exams.
+
+\section{Description of AdaBoost}
+
+In this section, we formally introduce the AdaBoost algorithm, and give some numerical examples.
+
+\subsection{Preliminaries}
+
+Following the lecture notes, we consider binary classification ($y \in \{-1,1\}$) of $d$-dimensional input vectors ($\xv \in \RR^d$), and we seek to learn a classifier from a set of $n$ data points, $\Dc = \{(\xv_t,y_t)\}_{t=1}^n$.  While AdaBoost can be defined with an arbitrary class of base learners, we will focus our attention on one of the simplest possible such classes, namely, {\em decision stumps}.  A decision stump performs classification by simply thresholding one of the $d$ input features.  More formally, such a classifier can be written as
+    $$ h(\xv; \btheta) = \sign( s(x_k - \theta_0) ), $$
+where there are three parameters $\btheta = \{s,k,\theta_0\}$:
+\begin{itemize}
+    \item[(i)] $k$ is the index of the (only) feature that the decision is made based on;
+    \item[(ii)] $s$ is the sign, which is included to allow both combinations of $+$ on one side and $-$ on the other;
+    \item[(iii)] $\theta_0$ is the threshold at which different decisions are made on either side.
+\end{itemize}
+Examples of decision stumps in the case $d=2$ are depicted in Figure \ref{fig:stumps}.  As outlined above, AdaBoost will produce a classifier according to a weighted combination of $M$ decision stumps:
+    \begin{equation}
+        f_M(\xv) = \sum_{m=1}^M \alpha_m h(\xv; \btheta_m), \label{eq:fM}
+    \end{equation}
+leading to the final decision rule $\hat{y} = \sign( f_M(\xv) )$.
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=.6\textwidth]{stump_example}
+        \par
+        \caption{Two examples of decision stumps, each applied to the same unlabeled data set.  The points classified as positive are colored blue, and the points classified as negative are colored red. \label{fig:stumps}}
+    \end{figure}   
+
+\subsection{The Algorithm}
+
+AdaBoost takes as input the data set $\Dc$ and the number of iterations $M$, and performs the following steps:
+\begin{enumerate}
+    \item Initialize weights $w_0(t) = \frac{1}{n}$ for $t=1,\dotsc,n$.
+    \item For $m=1,\dotsc,M$, do the following:
+    \begin{enumerate}
+        \item Choose the next base learner $h(\cdot;\hat{\btheta}_m)$ as follows:
+        \begin{equation}
+            \hat{\btheta}_m = \argmin_{\btheta}  \sum_{t \,:\, y_t \ne h(\xv_t;\btheta)} w_{m-1}(t). \label{eq:boost_theta}
+        \end{equation}
+        \item Set $\hat{\alpha}_m = \frac{1}{2} \log \frac{1 - \hat{\epsilon}_m}{\hat{\epsilon}_m}$, where $\hat{\epsilon}_m = \sum_{t \,:\, y_t \ne h(\xv_t;\hat{\btheta}_m)}^n w_{m-1}(t)$ is the minimal value attained in \eqref{eq:boost_theta}.
+        \item Update the weights:
+        \begin{equation}
+            w_m(t) = \frac{1}{Z_m} w_{m-1}(t) e^{-y_t h(\xv_t;\hat{\btheta}_m) \hat{\alpha}_m } \label{eq:boost_w}
+        \end{equation}
+        for each $t=1,\dotsc,n$, where $Z_m$ is defined so that the weights sum to one:
+        \begin{equation}
+            Z_m = \sum_{t=1}^n w_{m-1}(t) e^{-y_t h(\xv_t;\hat{\btheta}_m) \hat{\alpha}_m }.  \label{eq:Zm}
+        \end{equation}
+    \end{enumerate}
+    \item Output $f_M(\xv) = \sum_{m=1}^M \hat{\alpha}_m h(\xv; \hat{\btheta}_m)$, corresponding to the classifier $\hat{y}= \sign(f_M(\xv))$.
+\end{enumerate}
+
+We proceed by providing some intuition behind each of the main steps.  For step (a), we refer to
+\begin{equation}
+    \epsilon_m = \sum_{t \,:\, y_t \ne h(\xv_t;\btheta)} w_{m-1}(t)
+\end{equation}
+as {\em weighted training error}. The selection rule \eqref{eq:boost_theta} is choosing a base learner that ``classifies best'' when certain samples are treated as more important than others, as dictated by the weights $w_{m-1}(\cdot)$.
+
+To understand the weight update rule \eqref{eq:boost_w} in step (c), it is useful to note that the quantity $-y_t h(\xv_t;\btheta)$ only takes values $+1$ or $-1$, and as a result, \eqref{eq:boost_w} can be rewritten as 
+    \begin{equation}
+        w_m(t) = \frac{1}{Z_m} w_{m-1}(t) \times
+        \begin{cases}
+            e^{\hat{\alpha}_m} & y_t \ne h(\xv_t;\hat{\btheta}_m) \\
+            e^{-\hat{\alpha}_m} & y_t = h(\xv_t;\hat{\btheta}_m).
+        \end{cases} \label{eq:update}
+    \end{equation}
+As a result, we are {\em increasing the weight} if the newly-chosen base learner classifies $\xv_t$ incorrectly, and {\em decreasing the weight} otherwise.  This aligns with the intuition given in Section \ref{sec:intro}; future iterations should place more importance on inputs that were previously classified wrongly. 
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=.4\textwidth]{alpha_plot}
+        \par
+        \caption{Plot of $\hat{\alpha}_m$ as a function of $\hat{\epsilon}_m$. \label{fig:alpha_plot}}
+    \end{figure}   
+
+The choice of $\hat{\alpha}_m$ in step (b) arises from optimizing a certain expression in the mathematical analysis (see Section \ref{sec:math}), but we can still give some intuition behind it here.  In Figure \ref{fig:alpha_plot}, we plot this choice of $\hat{\alpha}_m$ as a function of $\hat{\epsilon}_m$, and observe that it is a decreasing function.  We therefore have the intuitive property that a higher vote is given to a base learner that has a lower weighted training error.  In the extreme cases, we have the following:
+\begin{itemize}
+    \item If $\hat{\epsilon}_m = 0$, then we have a ``perfect'' base learner, so it receives an infinitely large vote.  However, this case will only occur in a data set where a single decision stump can classify all points correctly, which is not to be expected.
+    \item If $\hat{\epsilon}_m = \frac{1}{2}$, then we have a ``useless'' base learner, since even random guessing has a 50\% success rate.  Hence, in this case, the base learner receives a vote of zero.
+\end{itemize}
+We note that the case $\hat{\epsilon}_m > \frac{1}{2}$ will never be encountered in \eqref{eq:boost_theta}, because if we have a decision stump with weighted training error greater than $\frac{1}{2}$, then flipping its sign will make the weighted training error less than half.  Hence, the latter will be preferred by the minimization performed in \eqref{eq:boost_theta}.
+
+\subsection{Experimental Examples}
+
+In Figure \ref{fig:exp}, we show the results of running AdaBoost for $M=50$ iterations, using two different data sets with $n=400$ points.  The $\xv_t$ values were chosen uniformly at random from $[-1,1]^2$, and their labels were assigned according to the ``ground truth'' image shown.
+
+We see that AdaBoost is able to roughly recover the shapes of the classification functions that were used to generate the data.  On the other hand, the ``blocky'' behavior of the final output could be considered undesirable.  This behavior arises from the use of the {\em extremely simple} decision stump class for the base learner; see Section \ref{sec:ext} for further discussion. 
+
+    \begin{figure}
+        \centering
+        \includegraphics[width=.43\textwidth]{BoostingExp1} ~~~~~
+        \includegraphics[width=.46\textwidth]{BoostingExp2}
+        \par
+        \caption{Experimental results for AdaBoost on two data sets with $n=400$ data points and $M=50$ boosting iterations.  The bottom-right of each example shows a color map of the function $f_M(\xv)$, and taking its sign gives the predictions shown in the bottom-left. \label{fig:exp}}
+    \end{figure}  
+
+\section{Mathematical Analysis} \label{sec:math}
+
+An elegant theoretical result on the AdaBoost algorithm states that as long as each base learner performs {\em slightly better} than random guessing (i.e., slightly better weighted training error than $\frac{1}{2}$), the proportion of misclassified points in $\Dc$ is guaranteed to decrease {\em exponentially fast} in the number of iterations $M$.  This is formally stated in the following.
+
+\begin{thm} \label{thm:main}
+    For any data set $\Dc = \{(\xv_t,y_t)\}_{t=1}^n$, after $M$ iterations, the training error of AdaBoost satisfies
+    \begin{equation}
+        \frac{1}{n}\sum_{t=1}^n \openone\{ y_t \ne \sign(f_M(\xv_t)) \} \le \exp\bigg( -2\sum_{m=1}^M \Big(\frac{1}{2}-\hat{\epsilon}_m\Big)^2 \bigg). \label{eq:main_result}
+    \end{equation}
+    In particular, if $\hat{\epsilon}_m \le \frac{1}{2} - \gamma$ for all $m$ and some $\gamma > 0$, then
+    \begin{equation}
+        \frac{1}{n}\sum_{t=1}^n \openone\{ y_t \ne \sign(f_M(\xv_t)) \}  \le e^{-2M\gamma^2}. \label{eq:boosting2}
+    \end{equation}
+\end{thm}
+This result makes no explicit assumptions on the data set (e.g., linear separability), but rather only assumes $\hat{\epsilon}_m \le \frac{1}{2} - \gamma$, i.e., slightly outperforming random guessing.  It is also interesting to note that since the left-hand side of \eqref{eq:boosting2} only takes values in $\big\{0,\frac{1}{n},\dotsc\big\}$, the training error is zero for $M > \frac{\log n}{2\gamma^2}$.
+
+We only provide a brief outline of the proof of Theorem \ref{thm:main} here, and provide the details in the appendix:
+\begin{itemize}
+    \item The first step is to upper bound the weighted training-error in terms the  {\em exponential loss}, defined as
+    \begin{equation}
+        \Loss_{\rm exp}(y, f(\xv)) = \exp(- y f(\xv)). \label{eq:loss_exp}
+    \end{equation}
+    Also defining the usual $0$-$1$ loss $\Loss_{01}(y,f(\xv)) = \openone\{ y \ne \sign( f(\xv) ) \}$, a simple plot of the two losses can be used to establish that $\Loss_{01}(y,f(\xv)) \le \Loss_{\rm exp}(y, f(\xv))$, and hence the training error satisfies
+    \begin{equation}    
+        \frac{1}{n}\sum_{t=1}^n\openone\{ y_t \ne \sign(f_M(\xv_t)) \} \le \frac{1}{n}\sum_{t=1}^n e^{-y_t f_M(\xv_t)}. \label{eq:step1}
+    \end{equation}
+    \item The second step is to rewrite the right-hand side of \eqref{eq:step1} as follows:
+    \begin{equation}
+        \frac{1}{n}\sum_{t=1}^n e^{-y_t f_M(\xv_t)} = \prod_{m=1}^M Z_m. \label{eq:step2}
+    \end{equation}  
+    While this is an unusual identity, it follows by a fairly simple recursion argument in which we write $w_0(t) = \frac{1}{n}$, then use the weight update expression \eqref{eq:boost_w} to write $w_1(t)$ in terms of $Z_1$, $w_2(t)$ in terms of $Z_1$ and $Z_2$, and so on, up to $w_M(t)$ in terms of $Z_1,\dotsc,Z_M$.  The fact that $\sum_{t=1}^n w_M(t) = 1$ can then be used to establish \eqref{eq:step2}.
+    \item The remaining steps use some algebraic manipulations to characterize each $Z_m$ and upper bound it in terms of simpler quantities.  First, the definition of $Z_m$ is simplified to $e^{\hat{\alpha}_m} \hat{\epsilon}_m + e^{-\hat{\alpha}_m}(1 - \hat{\epsilon}_m)$, and then solving $\frac{\partial Z_m}{\partial \hat{\alpha}_m} = 0$ shows that the choice $\hat{\alpha}_m = \frac{1}{2} \log \frac{1 - \hat{\epsilon}_m}{\hat{\epsilon}_m}$ gives the smallest value of $Z_m$, and that this value simplifies to
+    \begin{equation}
+        Z_m = \sqrt{ 1 - (1-2\hat{\epsilon}_m)^2 }. \label{eq:Z_expression}
+    \end{equation}
+    With some additional tedious but basic algebraic manipulations, \eqref{eq:Z_expression} can then be further upper bounded as follows:
+    \begin{equation}
+        Z_m \le \exp\Big( -\frac{1}{2} (1-2\hat{\epsilon}_m)^2 \Big). \label{eq:Z_expression2}
+    \end{equation}
+    Combining \eqref{eq:Z_expression2} with \eqref{eq:step1}--\eqref{eq:step2}, we obtain the desired result in \eqref{eq:main_result}.
+\end{itemize}
+
+\section{Extensions and Further Results} \label{sec:ext}
+
+In this section, we briefly outline some more advanced algorithms and theory building on the previous sections.  Due to space limitations, we only provide a short discussion on each of these.
+
+\subsection{Base Learners Beyond Decision Stumps} \label{sec:base}
+
+In principle, any class of base learners could be used, instead of only decision stumps.  The choice of base learner class requires a suitable balance between various factors -- having a more complex base learner may lead to more powerful classifiers and fewer boosting iterations being required (i.e., smaller $M$), but may also make the crucial selection step in \eqref{eq:boost_theta} computationally challenging.  In addition, overly complicated base learners may lead to problems with overfitting.  In practice, a generalization of decision stumps known as {\em decision trees} often provides a good balance of these competing factors \cite{blog}.
+
+\subsection{Multi-Class Boosting} \label{sec:multi}
+
+While classification problems are commonly assumed to be binary, {\em multi-class} problems are also of considerable practical interest (e.g., number recognition would have 10 classes, and digit recognition would have at least 36).  Techniques for converting binary classifiers to multi-class classifiers (e.g., one vs.~rest and one vs.~one) often pose significant practical limitations, e.g., see \cite[Section 4.1.2]{bishop2006pattern}.  Fortunately, AdaBoost permits a natural direct extension to the multi-class setting, both in terms of the algorithm and its underlying theory \cite{saberian2011multiclass}.  In addition, although it is usually described in the context of classification, it can even be applied to regression problems \cite{scikit}, in which the label $y$ is continuous rather than finite-valued.
+
+\subsection{Characterization of the Test Error} \label{sec:test_error}
+
+In the discussion after Theorem \ref{thm:main}, we concluded that the training error of AdaBoost decreases to zero when $M$ is large enough.  In general, zero training error in machine learning is {\em not} considered a good thing, as it suggests that the classifier may be overly complex and subject to overfitting.  Surprisingly, however, AdaBoost has been shown to exhibit quite the opposite behavior in practice:  The test error (i.e., the performance on data that was not used in training) remains small even when the training error is zero, and can even {\em continue to decrease} when AdaBoost is run for additional iterations after reaching zero training error.
+
+A partial explanation for this phenomenon was given by Schapire {\em et al.}~\cite{schapire1998boosting} using the notion of {\em margin}.  Recalling that the proof of Theorem \ref{thm:main} is based on upper bounding the 0-1 loss by the exponential loss, we find that a very small exponential loss not only guarantees a low 0-1 loss, but also guarantees a {\em large margin} (i.e., $f_M(\xv)$ is not only positive, but is far from zero).  By exploiting this property and some advanced connections between margin and generalization, theoretical guarantees can be provided not only for the training error, but also the test error \cite{schapire1998boosting}.
+
+ 
+% \renewcommand{\newblock}{}
+\newpage
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\newpage
+{\huge \centering \bf Appendix \par}
+
+\appendix
+
+\section{Proof of Theorem \ref{thm:main} (AdaBoost Training Error Guarantee)}
+
+The proof proceeds in several steps.
+
+\medskip
+{\noindent \bf Step 1 (Convert to exponential loss):} As stated following \eqref{eq:loss_exp}, the exponential loss upper bounds the $0$-$1$ loss, so
+    \begin{equation}    
+        \frac{1}{n}\sum_{t=1}^n\openone\{ y_t \ne \sign(f_M(\xv_t)) \} \le \frac{1}{n}\sum_{t=1}^n e^{-y_t f_M(\xv_t)}. \label{eq:step1a}
+    \end{equation}
+
+\medskip
+{\noindent \bf Step 2 (An unusual equality):} In this step, we show that
+    \begin{equation}
+        \frac{1}{n}\sum_{t=1}^n e^{-y_t f_M(\xv_t)} = \prod_{m=1}^M Z_m. \label{eq:step2a}
+    \end{equation}  
+To see this, we write out the weight updates recursively according to the initialization $w_(t) = \frac{1}{n}$ and the update rule \eqref{eq:boost_w}:
+    \begin{gather*}
+        w_0(t) = \frac{1}{n} \\
+        w_1(t) = \frac{1}{n} \frac{ \exp(-\hat{\alpha}_1 y_t h(\xv_t; \btheta_1 )) }{Z_1} \\
+        w_2(t) = \frac{1}{n} \frac{ \exp(-\hat{\alpha}_1 y_t h(\xv_t; \btheta_1 )) }{Z_1} \frac{ \exp(-\hat{\alpha}_2 y_t h(\xv_t; \btheta_2 )) }{Z_2} \\
+        \vdots \\
+        w_M(t) = \frac{1}{n}  \frac{\exp\big( -\sum_{m=1}^M \hat{\alpha}_m y_t h(\xv_t;\btheta_m) \big)}{ \prod_{m=1}^M Z_m } = \frac{1}{n} \cdot \frac{\exp\big( -y_t f_M(\xv_t) \big)}{ \prod_{m=1}^M Z_m },
+    \end{gather*}
+    where in the last step we substituted \eqref{eq:fM}.
+    The desired claim follows since $\sum_{t=1}^M w_M(t) = 1$ by construction (i.e., by the definition of the weights in the algorithm).
+
+\medskip
+{\noindent \bf Step 3 (Rewriting $Z_m$):} Recall the definition of $Z_m$ in \eqref{eq:Zm}.  We can split the sum over $t$ into two cases: If $y_t = h(\xv_t;\hat{\btheta}_m)$ then $y_t h(\xv_t;\hat{\btheta}_m) = 1$, whereas if $y_t \ne h(\xv_t;\hat{\btheta}_m)$ then $y_t h(\xv_t;\hat{\btheta}_m) = -1$.  Therefore, \eqref{eq:Zm} simplifies to
+\begin{align}
+    Z_m &= \sum_{t\,:\,y_t \ne h(\xv_t;\hat{\btheta}_m)} e^{\hat{\alpha}_m} w_{m-1}(t) + \sum_{t\,:\,y_t = h(\xv_t;\hat{\btheta}_m)} e^{-\hat{\alpha}_m} w_{m-1}(t) \nonumber \\
+        &= e^{\hat{\alpha}_m} \hat{\epsilon}_m + e^{-\hat{\alpha}_m}(1 - \hat{\epsilon}_m), \label{eq:Z_new}
+\end{align} 
+where we have used the fact that $\sum_{t\,:\,y_t \ne h(\xv_t;\hat{\btheta}_m)} w_{m-1}(t) = \hat{\epsilon}_m$ by definition, and we similarly have $\sum_{t\,:\,y_t = h(\xv_t;\hat{\btheta}_m)} w_{m-1}(t) = 1 - \hat{\epsilon}_m$ since the weights sum to one by definition.
+
+Note that $\frac{\partial Z_m}{\partial \hat{\alpha}_m} = \hat{\epsilon}_m e^{\hat{\alpha}_m} - e^{-\hat{\alpha}_m}(1-\hat{\epsilon}_m)$; setting this to zero and solving gives $\hat{\alpha}_m = \frac{1}{2} \log \frac{1 - \hat{\epsilon}_m}{\hat{\epsilon}_m}$. It is easy to check that it is a minimum, and not a maximum.
+
+\medskip
+{\noindent \bf Step 4 (Substitute $\hat{\alpha}_m$ and simplify):} Substituting the choice of $\hat{\alpha}_m$ into \eqref{eq:Z_new} gives
+    \begin{align}
+        Z_m &= \sqrt{\frac{1-\hat{\epsilon}_m}{\hat{\epsilon}_m}} \hat{\epsilon}_m + \sqrt{\frac{\hat{\epsilon}_m}{1-\hat{\epsilon}_m}}(1 - \hat{\epsilon}_m) \\
+            &= 2\sqrt{ \hat{\epsilon}_m (1-\hat{\epsilon}_m) } \\
+            &= \sqrt{ 1 - (1-2\hat{\epsilon}_m)^2 }, \label{eq:blah}
+    \end{align}
+    where the last step can be verified by expanding the square.  The last line allows us to use the convenient inequality $\sqrt{1-c^2} = \exp\big( \frac{1}{2}\log( 1 - c^2 ) \big) \le \exp\big( - \frac{1}{2} c^2 \big)$m where the last step uses $\log(1+a) \le a$.  The motivation behind doing this is that products of exponentials are convenient, because they simplify to $\exp\big(\sum\dotsc)$.
+
+    Applying this upper bound in \eqref{eq:blah} gives $Z_m \le \exp\big( -\frac{1}{2} (1-2\hat{\epsilon}_m)^2 \big)$, and combining with \eqref{eq:step1a}--\eqref{eq:step2a} gives
+    \begin{align*}
+        \frac{1}{n}\sum_{t=1}^n\openone\{ y_t \ne \sign(f_M(\xv_t)) \} 
+            &\le \prod_{m=1}^M Z_m \\
+            &\le \prod_{m=1}^M \exp\bigg( -\frac{1}{2} (1-2\hat{\epsilon}_m)^2 \bigg) \\
+            &= \exp\bigg( -2\sum_{m=1}^M \Big(\frac{1}{2}-\hat{\epsilon}_m\Big)^2 \bigg),
+    \end{align*}
+    which proves the desired result in \eqref{eq:main_result}.
+\end{document}

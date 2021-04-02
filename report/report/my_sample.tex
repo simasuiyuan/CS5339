@@ -1,0 +1,82 @@
+\documentclass[english,12pt]{article}
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{algorithmic}
+\usepackage{float}
+
+\input{preamble}
+
+\title{CS5339 Project -- A Benchmark of Active Learning for Classification}
+\date{March 22, 2021}
+\author{Ma Yuan E0674520}
+
+\newcommand{\ntrain}{n_{\rm train}}
+\newcommand{\ntest}{n_{\rm test}}
+
+\onehalfspacing
+
+\begin{document}
+	\maketitle
+	
+	\section{Introduction} \label{sec:intro}
+	
+	The fundamental problem of binary classification is central to both classical and modern machine learning.  Many of the earliest works focused on simple classification rules, such as linear classifiers or nearest-neighbor rules, whereas more recent developments have led to more sophisticated ideas such as kernel methods, artificial neural networks, and more.  Many such methods can be viewed as {\em combining simple classifiers} to produce a {\em complex classifier}.
+	
+	In this report, we will overview a famous algorithm falling under this category, known as AdaBoost, which was introduced by Freund and Schapire in 1997 \cite{freund1997decision}, and subsequently significantly impacted both the theory and practice of machine learning.  The authors were awarded the 2003 G\"odel prize, and the algorithm is often considered to be one one of the most effective ``off-the-shelf'' algorithms requiring minimal tuning and tweaking \cite{blog,wiki}.
+	
+	Before proceeding with a formal description, we outline some of the main high-level concepts and ideas behind AdaBoost:
+	\begin{itemize}
+		\item The algorithm is given a class of {\em weak learners}, also known as {\em base learners}, containing classifiers that are not very powerful in themselves.  Despite this, suitably ``combining'' many such classifiers can lead to a much more powerful classifier.
+		\item The combining is done by a simple voting strategy -- each base learner classifies a given point as positive or negative, and the final classification is performed according to a weighted vote of these base learners, where higher votes are given to the base learners that are believed to be more accurate. The role of AdaBoost is to {\em select the base learners}, as well as choosing the voting weight for each of them.
+		\item The base learners are selected one at a time, and are chosen to minimize a {\em weighted training error} according to some weights that are maintained on the data points (not to be confused with the voting weights).  The more a point has been classified correctly by previously-selected base learners, the lower weight it receives, whereas a point that was previously classified incorrectly many times is assigned a higher weight.  This ensures that more attention is focused on the points where we need to make up for earlier mistakes.
+		\item The weights are updated using the idea of {\em multiplicative weight updates}, which is a far-reaching tool that has also been explored in numerous other fields \cite{mult_weights}.
+	\end{itemize}
+	To appreciate the third of these points, it is useful to think of the following analogy: If a teacher wants to teach their students a number of concepts, then they should focus more attention on the concepts that many students scored poorly on in previous tests/exams.
+	
+	\section{Description of AdaBoost}
+	
+	In this section, we formally introduce the AdaBoost algorithm, and give some numerical examples.
+	
+	\subsection{Preliminaries}
+	
+	
+	\subsection{The Algorithm}
+	
+	
+	\subsection{Experimental Examples}
+	
+	
+	\section{Mathematical Analysis} \label{sec:math}
+	
+	
+	\section{Extensions and Further Results} \label{sec:ext}
+	
+	In this section, we briefly outline some more advanced algorithms and theory building on the previous sections.  Due to space limitations, we only provide a short discussion on each of these.
+	
+	\subsection{Base Learners Beyond Decision Stumps} \label{sec:base}
+	
+	
+	\subsection{Multi-Class Boosting} \label{sec:multi}
+	
+	
+	\subsection{Characterization of the Test Error} \label{sec:test_error}
+	
+	
+	
+	% \renewcommand{\newblock}{}
+	\newpage
+	\bibliographystyle{plain}
+	\bibliography{refs}
+	
+	\newpage
+	{\huge \centering \bf Appendix \par}
+	
+	\appendix
+	
+	\section{Proof of Theorem \ref{thm:main} (AdaBoost Training Error Guarantee)}
+	
+	
+\end{document}

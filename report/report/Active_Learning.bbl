@@ -1,0 +1,26 @@
+\begin{thebibliography}{1}
+
+\bibitem{wiki}
+Active learning (machine learning).
+\newblock
+  \url{https://en.wikipedia.org/wiki/Active_learning_(machine_learning)}.
+
+\bibitem{LewisandGale1994}
+D.~Lewis and W.~Gale.
+\newblock A sequential algorithm for training text classifiers.
+\newblock In {\em ACM SIGIR Conference on Research and Development in
+  Information Retrieval}, pages 3--12. ACM Springer.
+
+\bibitem{alSurvey}
+Burr Settles.
+\newblock Active learning literature survey.
+\newblock {\em Computer Sciences Technical Report 1648}.
+
+\bibitem{ALuncertantDense}
+J.~{Zhu}, H.~{Wang}, B.~K. {Tsou}, and M.~{Ma}.
+\newblock Active learning with sampling by uncertainty and density for data
+  annotations.
+\newblock {\em IEEE Transactions on Audio, Speech, and Language Processing},
+  18(6):1323--1331, 2010.
+
+\end{thebibliography}

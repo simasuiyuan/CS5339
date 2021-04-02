@@ -1,0 +1,63 @@
+This is BibTeX, Version 0.99d
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: Active_Learning.aux
+Reallocating 'name_of_file' (item size: 1) to 6 items.
+The style file: plain.bst
+Reallocating 'name_of_file' (item size: 1) to 5 items.
+Database file #1: refs.bib
+I was expecting a `,' or a `}'---line 8 of file refs.bib
+ :  
+ :  year={2010},
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+I was expecting a `,' or a `}'---line 17 of file refs.bib
+ :  
+ :  year={1994}
+(Error may have been on previous line)
+I'm skipping whatever remains of this entry
+Warning--to sort, need author or key in wiki
+Warning--empty author in wiki
+Warning--empty year in LewisandGale1994
+Warning--empty year in alSurvey
+You've used 4 entries,
+            2118 wiz_defined-function locations,
+            522 strings with 4676 characters,
+and the built_in function-call counts, 1149 in all, are:
+= -- 110
+> -- 44
+< -- 1
++ -- 19
+- -- 14
+* -- 79
+:= -- 191
+add.period$ -- 12
+call.type$ -- 4
+change.case$ -- 19
+chr.to.int$ -- 0
+cite$ -- 8
+duplicate$ -- 46
+empty$ -- 95
+format.name$ -- 14
+if$ -- 242
+int.to.chr$ -- 0
+int.to.str$ -- 4
+missing$ -- 3
+newline$ -- 22
+num.names$ -- 6
+pop$ -- 23
+preamble$ -- 1
+purify$ -- 15
+quote$ -- 0
+skip$ -- 30
+stack$ -- 0
+substring$ -- 63
+swap$ -- 9
+text.length$ -- 1
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 16
+warning$ -- 4
+while$ -- 9
+width$ -- 5
+write$ -- 40
+(There were 2 error messages)

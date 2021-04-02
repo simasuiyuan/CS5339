@@ -1,0 +1,45 @@
+\begin{thebibliography}{1}
+
+\bibitem{scikit}
+Adaboost -- {W}ikipedia.
+\newblock \url{https://en.wikipedia.org/wiki/AdaBoost}.
+
+\bibitem{mult_weights}
+The reasonable effectiveness of the multiplicative weights update algorithm.
+\newblock
+  \url{https://jeremykun.com/2017/02/27/the-reasonable-effectiveness-of-the-multiplicative-weights-update-algorithm/}.
+
+\bibitem{wiki}
+sklearn.ensemble.{A}da{B}oost{R}egressor.
+\newblock
+  \url{https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.AdaBoostRegressor.html}.
+
+\bibitem{bishop2006pattern}
+Christopher~M Bishop.
+\newblock {\em Pattern recognition and machine learning}.
+\newblock springer, 2006.
+
+\bibitem{freund1997decision}
+Yoav Freund and Robert~E Schapire.
+\newblock A decision-theoretic generalization of on-line learning and an
+  application to boosting.
+\newblock {\em Journal of Computer and System Sciences}, 55(1):119--139, 1997.
+
+\bibitem{blog}
+Sachin Joglekar.
+\newblock A (small) introduction to boosting.
+\newblock \url{https://codesachin.wordpress.com/tag/adaboost/}.
+
+\bibitem{saberian2011multiclass}
+Mohammad~J Saberian and Nuno Vasconcelos.
+\newblock Multiclass boosting: Theory and algorithms.
+\newblock In {\em Advances in Neural Information Processing Systems}, pages
+  2124--2132, 2011.
+
+\bibitem{schapire1998boosting}
+Robert~E Schapire, Yoav Freund, Peter Bartlett, Wee~Sun Lee, et~al.
+\newblock Boosting the margin: A new explanation for the effectiveness of
+  voting methods.
+\newblock {\em The Annals of Statistics}, 26(5):1651--1686, 1998.
+
+\end{thebibliography}

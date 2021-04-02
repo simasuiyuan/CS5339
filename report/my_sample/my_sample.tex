@@ -1,0 +1,200 @@
+\documentclass[english,12pt]{article}
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{algorithmic}
+\usepackage{float}
+
+\input{preamble}
+
+\title{CS5218 Assignment1 -- Taint Analysis Design}
+\date{February 26, 2021}
+\author{Ma Yuan E0674520}
+
+\newcommand{\ntrain}{n_{\rm train}}
+\newcommand{\ntest}{n_{\rm test}}
+
+\onehalfspacing
+
+\begin{document}
+	\maketitle
+	
+	\section{Task 1: Designing Taint Analysis} \label{sec:task1}
+	
+	According to the description of Taint Checking, the data flow analysis can be defined as follow:
+	\begin{enumerate}
+		\item For each program basic block, logging the assignment have been made and yet not been overwritten when program execution reaches the basic block along some path.
+		\item When program analysis reach a fixed point, the tainted variable is observed in the least upper bound, we say that the program is possible to be exposed to a potentially dangerous tainted variable. 
+		\item This data flow analysis can be performed by a {\em Reach Definition analysis}. 
+	\end{enumerate}
+	
+	Therefore base on the data flow equations for Reach Definition, we can modify it to perform taint variables analysis as such:
+	\begin{figure}
+		\centering
+		\includegraphics[width=.8\textwidth]{powerset_lattice}
+		\par
+		\caption{Example of powerset lattice map for taint variables analysis. \label{fig:powerset_lattice}}
+	\end{figure}
+	\begin{itemize}
+		\item $L = \mathcal{P}(Var_* \times Lab_*)$ \;\;(Example powerset lattice map:$(\mathcal{P}(Var_* \times Lab_*)^A,\sqsubseteq)$ Figure \ref{fig:powerset_lattice}) 
+		\item Analysis Type: May, Forward
+		\item Data Flow Equations:
+		\begin{equation}
+			TaintRD_{exit}(\ell)\;=\;(TaintRD_{entry}(\ell) \;\setminus\; kill_{TaintRD}(B^\ell)) \cup gen_{TaintRD}(B^\ell),\;where B^\ell \in blocks(S_F)  \label{eq:data_flow_equ_exit}
+		\end{equation}
+		\begin{equation}
+			TaintRD_{entry}(\ell)\;=\;
+			\begin{cases}
+				\{(x,?)\;|\;x \in FV(S_F)\} \;\;if \ell = init(S_F) \\
+				\cup \{TaintRD_{exit}(\ell') | (\ell', \ell) \in flow(S_F)\} \;\;otherwise)
+			\end{cases} \label{eq:data_flow_equ_entry}
+		\end{equation}
+		where $kill_{TaintRD}(B^\ell)$ and $gen_{TaintRD}(B^\ell)$ are formulated as:
+		\begin{equation}
+			kill_{TaintRD}([z:=a]^\ell) \;=\; 
+			\begin{cases}
+				\{(z,?)\} \cup \{(z,\ell)\}, \;\;if\;B^{\ell'} \;is \;an \;assignment \;to \;z \;in \; S_F \\
+				\emptyset \;\;otherwise)
+			\end{cases} \label{eq:data_flow_equ_entry}
+		\end{equation}
+		\begin{equation}
+			gen_{TaintRD}([z:=a]^\ell)\; =\; \{(z,\ell)\}
+		\end{equation}
+		\item $\sqcup: \cup$
+		\item $\bot: \emptyset$
+		\item $\iota: \{(x,?)\;|\;x \in FV(S_F)\}$
+		\item $E: \{init(S_*)\}$
+		\item $F: flow(S_*)$
+		\item Transfer function: 
+		\begin{equation}
+			\mathcal{F} = \{ f : L \rightarrow L\;|\;\exists l_k, l_g : f(l) = (l\; \setminus \;l_k) \cup l_g\}
+		\end{equation}
+		\begin{equation}
+			f_{\ell}\;=\;(l\; \setminus \;kill(B^\ell)\; \cup \;gen(B^\ell)\;\; where\;B^\ell \; \in \; blocks(S_*))
+		\end{equation}
+	\end{itemize}
+	
+	In order to find the Least fixed point of F, here the Chaotic Iteration for Reaching Definition algorithm in the lecture is used to perform analysis. Base on the properties of the Chaotic Iteration, the analysis program always terminates:
+	
+	\begin{algorithm}[H]
+		\SetAlgoLined
+		\SetKwInOut{Input}{input}
+		\SetKwInOut{Output}{output}
+		\Input{$F(RD) = (F_1(RD),...,F_A(RD))$}
+		\Output{$RD = (RD_1,...,RD_A)$}
+		Initialization: $RD_1:=\emptyset , ... , RD_A:=\emptyset$\;
+		
+		\While{$RD_j \;\neq \; F_j(RD_1,...,RD_A)\;for\;some\;j$}{
+			$RD_j \;:= \; F_j(RD_1,...,RD_A)$
+		}
+		\caption{Chaotic Iteration for Reaching Definition}
+	\end{algorithm}
+	
+	\section{Task 2: Simple Taint Analysis Implementation} \label{sec:task2}
+	\subsection{TaintChk.cpp implementation}
+	From the first example, I observed example1.ll(Appendix: Figure \ref{fig:example1_ll}) has following 4 key instructions \cite{llvm}:
+	\begin{itemize}
+		\item $alloca$: The 'alloca' instruction allocates memory on the current stack frame of the procedure that is live until the current function returns to its caller. (Initialization)
+		\item $store$: The 'store' instruction is used to write to memory.(specifies a value to store and an address to store it into)
+		\item $load$: The 'load' instruction is used to read from memory.(specifies the memory address to load from)
+		\item $icmp$: The 'icmp' instruction perform comparison.
+	\end{itemize}
+	According to the definition of the instructions \cite{llvm}, we can implement the Taint checking algorithm as following:
+	
+	\begin{algorithm}[H]
+		\SetAlgoLined
+		\begin{algorithmic}
+			\STATE $Init\; lfp_{map}\;=\;\{\$string\;block\_name:\;\$struct<string, set<string> >\;blk_{map}\}$\;
+			\STATE $Init\; \$set<string>\;Last\_load\_var\_\{var\}\}$\;
+			\STATE $Init\; \$set<string>\;Alloca\_var\_\{var\}\}$\;
+			
+			\FORALL {$block\; \in test.ll $}
+			\STATE $blk_{map}\;=\;\{\$string\;var_{store\_Var}:\;\$set<string>\;var_{load\_Var}\}$\;
+			\FORALL {$Instr\; \in Block $}
+			
+			\IF {$Instr = "AllocaInst"$}
+			\STATE $Alloca\_var \gets Instr.getName()$
+			\IF {$allocate_vars = "source"$}
+			\STATE $lfp_{map}[block.name].insert("source")$
+			\ENDIF
+			\ENDIF
+			
+			\IF {$Instr = "store"$}
+			\STATE $Last\_load\_var \gets Instr.getOperand(0).name$
+			\ENDIF
+			
+			\IF {$Instr = "store"$}
+			\STATE $blk_{map}[Instr.getOperand(1).name].remove(items)$
+			\STATE $blk_{map}[Instr.getOperand(1).name] \gets \;Last\_load\_var$
+			\STATE $clear(Last\_load\_var\_{var})$
+			\ENDIF
+			
+			\IF {$Instr = "icmp"$}
+			\STATE $clear(Last\_load\_var\_{var})$
+			\ENDIF
+			
+			\ENDFOR
+			\STATE $lfp_{map}[block.name].insert(blk_{map})$
+			\ENDFOR
+		\end{algorithmic}
+		\SetKwInOut{Output}{output}
+		\Output {$lfp_{map}$}
+		\caption{Simple algorithm for Taint Variable Analyzer}
+	\end{algorithm}
+
+
+	\section{Task 3: Loop Handling Implementation} \label{sec:task3}		 
+	As mentioned in section1, the Chaotic Iteration algorithm is implemented to perform taint variable analysis. In order to terminates the while loop, we need to check if $RD = F(RD_1,...,RD_A)$. To implement this, we just need to create a loop to explore the blocks map from algorithm1 follow the pre-defined sequence and for each iteration we maintain the taint variables in block and continue to update it, until the predecessor block contains the same information as current analyzed block(if program has a fixed point).
+	
+	\begin{algorithm}[H]
+		\caption{Chaotic Iteration for Reaching Definition}
+		\SetAlgoLined
+		\SetKwInOut{Input}{input}
+		\SetKwInOut{Output}{output}
+		\Input{$lfp_{map}\;from\;Algorithm1$}
+		\Input{$pre-defined\;blockOrder$}
+		\Output{$result\_lfp_{map}$}
+		Initialization: $lfp_indicator; \;result\_lfp_{map}$
+		
+		\begin{algorithmic}
+			
+		\WHILE {true}
+		\STATE $lfp_{indicator}\;:= \;0$
+		\FORALL{$block\; \in blockOrder $}
+		\STATE $lfp_{map}[block].insert(result\_lfp_{map}[block.predecessor])$
+		\STATE $prev\_lfp_{map} = lfp_{map}.copy()$
+		\FORALL{$blk_{map}\; \in lfp_{map}[block] $}
+			\STATE $<string>\;var_{store\_Var} = blk_{map}.store\_Var$
+			\STATE $set<string>\;var_{load\_Var} = blk_{map}.load\_Var$
+			\IF {$ result\_lfp_{map}[block][var_{load\_Var}]\;!=\;result\_lfp_{map}[block].end()[var_{load\_Var}]$}
+			\STATE $result\_lfp_{map}[block].update(result\_lfp_{map}[block])$
+			\ENDIF
+		\ENDFOR
+		\IF {$prev\_lfp_{map}[block] == lfp_{map}[block]$}
+		\STATE $break$
+		\ENDIF
+		\ENDFOR
+		\ENDWHILE
+		\STATE \textbf{end}
+		\end{algorithmic}
+	\end{algorithm}
+	
+	\newpage
+	\bibliographystyle{plain}
+	\bibliography{refs}
+	
+	\newpage
+	{\huge \centering \bf Appendix \par}
+	
+	\appendix
+	
+	\begin{figure}
+		\centering
+		\includegraphics[width=1\textwidth]{example1_ll}
+		\par
+		\caption{example1.ll. \label{fig:example1_ll}}
+	\end{figure}
+	
+\end{document}

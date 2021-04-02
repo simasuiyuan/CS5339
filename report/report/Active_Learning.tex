@@ -1,0 +1,103 @@
+\documentclass[english,12pt]{article}
+\usepackage{fullpage}
+\usepackage{setspace}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{algorithmic}
+\usepackage{float}
+
+\input{preamble}
+
+\title{%
+	CS5339 Project -- Active Learning \\
+	\large Uncertainty Sampling Query Strategies Literature Review \\}
+\date{March 22, 2021}
+\author{Ma Yuan E0674520}
+
+\newcommand{\ntrain}{n_{\rm train}}
+\newcommand{\ntest}{n_{\rm test}}
+
+\onehalfspacing
+
+\begin{document}
+	\maketitle
+	
+	\section{Introduction} \label{sec:intro}
+	
+	Data labeling requires expensive labor or various costs. In the face of massive unstructured data, how to label it economically and accurately is a thorny issue. As a method of constructing an effective training set, the active learning algorithm with a small amount of labeled data let the machine Learning model effectively interactive with annotation expert(oracle), thereby choosing the most informative samples and effectively reducing the amount of labeled data needed to model Learning. To overcome the labeling bottleneck, active learning is widely used such as Speech recognition, Information extraction, Classification and filtering\cite{alSurvey}.
+	
+	In this report, firstly, we will discuss about the overview of active learning. This includes 2 essential building blocks of active learning which are the {\em Scenarios} and {\em Query strategies} \cite{wiki}.Then we will mainly focus on the most commonly used query strategies {\em Uncertainty Sampling} which proposed by Lewis and J. Catlett in 1994 \cite{LewisandGale1994,alSurvey}. Under this topic, we will also review the proposal suggested by J. Zhu, H. Wang in how to encountered the outliers problem \cite{ALuncertantDense}. 
+	
+	
+	\section{Description of Active learning}
+	
+	In this section, we will brief the active learning process. In the conventional modeling process, it usually includes several steps: sample selection, model training, model prediction and model update. In the field of active learning, two more steps are introduced, extraction of label candidate set and annotation by labeling "experts"(oracle)\cite{wiki}. 
+	
+	\subsection{The Active Learning Process}
+	To perform an active learning, we define the active learning model as \[A=(C,Q,S,L,U)\]
+	where $C$ is the classifier model, $L$ represents the labeled sample set, $S$ stands for annotation "experts"(oracle), $Q$ is the query strategy in use and $U$ represents the unlabeled datasets.
+	The flowchart\cite{alSurvey} can be interpreted as the following steps(take classification as an example):
+	\begin{enumerate}
+		\item Select the appropriate classifier as $C$ and query strategy as $Q$.
+		\item Split labeled sample $L$ datasets into {\em train\_sample} used to train model and {\em validation\_sample} used to verify the current model performance. And prepare unlabeled dateset {\em active\_sample} $U$.
+		\item Initialization: Random initialization or source domain initialization. If there are labeled samples of the target domain, train the model through these labeled samples;
+		\item Use the current model $C$ to predict the samples in {\em active\_sample} one by one (the prediction does not require labels), and get the prediction result of each sample. 
+		\item Here, we choose {\em Uncertainty Sampling} strategy as illustration to measure the labeled value of the sample. The sample with the predicted result closer to 0.5 indicates that \textbf{the current model has higher uncertainty, that is, the higher the value of the sample that needs to be labeled}.
+		\item The expert annotates the selected samples and append the annotated samples into {\em train\_sapmle}.
+		\item Retrain and update the model $C$ use the new {\em train\_sapmle}.
+		\item Use current model $C$ to verify the {\em validation\_sample}. If current model $C$ reaches the target or no longer continue to label new samples (no experts or no samples), the iterative process ends. Otherwise, repeat steps (4)-(7)
+	\end{enumerate}
+	For following discussion and experiment, a fully labeled datasets is prepared which, in other words, the oracle has labeled all samples although, in practice, the oracle annotates the sample in runs. So  in this report our major discussion will focus on the strategy of how to extract the most informative sample to be annotated from the unlabeled datasets $U$. 
+	
+	In order to extract most valuable sample in each run, we need two components, a {\em scenario} to be pose the quires from and a {\em query strategy} which chooses the sample based on the scoring metric.
+	
+	\subsection{Scenario}
+	In this section, three active learning scenarios are introduced
+	\subsection{Query Strategy Framework}
+	
+	
+	\subsection{The Algorithm}
+	
+	
+	\subsection{Experimental Examples}
+	
+	
+	\section{Mathematical Analysis} \label{sec:math}
+	  
+	
+	\section{Extensions and Further Results} \label{sec:ext}
+	
+	In this section, we briefly outline some more advanced algorithms and theory building on the previous sections.  Due to space limitations, we only provide a short discussion on each of these.
+	
+	\subsection{Base Learners Beyond Decision Stumps} \label{sec:base}
+	
+	
+	\subsection{Multi-Class Boosting} \label{sec:multi}
+	
+	
+	\subsection{Characterization of the Test Error} \label{sec:test_error}
+	
+	
+	
+	% \renewcommand{\newblock}{}
+	\newpage
+	\bibliographystyle{plain}
+	\bibliography{refs}
+	
+	\newpage
+	{\huge \centering \bf Appendix \par}
+	
+	\appendix
+	
+	\section{Figures}
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=.6\textwidth]{AL_flowchart}
+		\par
+		\caption{The pool-based active learning cycle. 
+		\label{fig:AL_flowchart}}
+	\end{figure} 
+	
+	
+\end{document}

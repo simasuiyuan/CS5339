@@ -1,0 +1,7 @@
+\begin{thebibliography}{1}
+
+\bibitem{llvm}
+Llvm language reference manual.
+\newblock \url{https://releases.llvm.org/2.6/docs/LangRef.html}.
+
+\end{thebibliography}
